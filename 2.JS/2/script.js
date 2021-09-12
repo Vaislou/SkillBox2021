@@ -1,14 +1,14 @@
 // 1
 
-// function sqrNumbers(x1, y1, x2, y2) {
-//     console.log(Math.abs(x2 - x1) * Math.abs(y2 - y1));
-// }
+function sqrNumbers(x1, y1, x2, y2) {
+    console.log(Math.abs(x2 - x1) * Math.abs(y2 - y1));
+}
 
-// sqr(2, 3, 10, 5);
-// sqr(10, 5, 2, 3);
-// sqr(-5, 8, 10, 5);
-// sqr(5, 8, 5, 5);
-// sqr(8, 1, 5, 1);
+sqrNumbers(2, 3, 10, 5);
+sqrNumbers(10, 5, 2, 3);
+sqrNumbers(-5, 8, 10, 5);
+sqrNumbers(5, 8, 5, 5);
+sqrNumbers(8, 1, 5, 1);
 
 
 // 2
