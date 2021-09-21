@@ -35,14 +35,18 @@
         return list;
     }
 
-    function createTodoItem(name) {
-        let item = document.createElement('li');
-        let buttonGroup = document.createElement('div');
-        let doneButton = document.createElement('button');
-        let deleteButton = document.createElement('button');
+    function createTodoItemElement(todoItem, { onDone, onDelete }) {
+        const doneClass = 'list-group-item-success';
+        const item = document.createElement('li');
+        const buttonGroup = document.createElement('div');
+        const doneButton = document.createElement('button');
+        const deleteButton = document.createElement('button');
 
         item.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-        item.textContent = name;
+        if (todoItem.done) {
+            item.classList.add(doneClass)
+        }
+        item.textContent = todoItem.name;
 
         buttonGroup.classList.add('btn-group', 'btn-group-sm');
         doneButton.classList.add('btn', 'btn-success');
@@ -50,29 +54,65 @@
         deleteButton.classList.add('btn', 'btn-danger');
         deleteButton.textContent = 'Удалить';
 
+        doneButton.addEventListener('click', () => {
+            onDone({ todoItem, element: item });
+            item.classList.toggle(doneClass, todoItem.done);
+        });
+
+        deleteButton.addEventListener('click', () => {
+            onDelete({ todoItem, element: item });
+        });
+
         buttonGroup.append(doneButton);
         buttonGroup.append(deleteButton);
         item.append(buttonGroup);
 
         return {
-            item,
-            doneButton,
-            deleteButton,
+            item
         };
     }
 
-    function createTodoApp(container, title = 'Список дел', array = {name: 'Тест', done: false}) {
+    async function createTodoApp(container, title, owner, array = {name: 'Тест', done: false}) {
 
         let todoAppTitle = createAppTitle(title);
         let todoItemForm = createTodoItemForm();
         let todoList = createTodoList();
-        let namePage = window.location.pathname.split('/').pop();
+        const handlers = {
+            onDone({ todoItem }) {
+                todoItem.done = !todoItem.done,
+                fetch(`http://localhost:3000/api/todos/${todoItem.id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ done: todoItem.done }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+            },
+            onDelete({ todoItem, element }) {
+                if (!confirm('Вы уверены?')) {
+                    return;
+                }
+                element.remove();
+                fetch(`http://localhost:3000/api/todos/${todoItem.id}`, {
+                    method: 'DELETE',
+                })
+            }
+        }
+        // let namePage = window.location.pathname.split('/').pop();
 
         container.append(todoAppTitle);
         container.append(todoItemForm.form);
         container.append(todoList);
 
         todoItemForm.button.setAttribute('disabled', 'true');
+
+        const response = await fetch(`http://localhost:3000/api/todos?owner=${owner}`);
+        const todoItemList = await response.json();
+
+        todoItemList.forEach(todoItem => {
+            const todoItemElement = createTodoItemElement(todoItem, handlers);
+            todoList.append(todoItemElement.item);
+        })
 
         todoItemForm.input.addEventListener('input', function() {
             if (todoItemForm.input.value.length > 0) {
@@ -82,80 +122,37 @@
             }
         });
 
-        function addItemButtonsActivities(itemName) {
-            itemName.doneButton.addEventListener('click', function() {
-                itemName.item.classList.toggle('list-group-item-success');
-                setLocalStorage();
-            });
-
-            itemName.deleteButton.addEventListener('click', function() {
-                if (confirm('Вы уверены ?')) {
-                    itemName.item.remove();
-                    setLocalStorage();
-                }
-            });
-        };
-
-        todoItemForm.form.addEventListener('submit', function(e) {
+        todoItemForm.form.addEventListener('submit', async e => {
             e.preventDefault();
 
             if (!todoItemForm.input.value) {
                 return;
             }
 
-            let todoItem = createTodoItem(todoItemForm.input.value);
+            const response = await fetch('http://localhost:3000/api/todos', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: todoItemForm.input.value.trim(),
+                    owner,
+                }),
+                headers: { 'Content-Type': 'applicatoin/json' },
+            });
 
-            addItemButtonsActivities(todoItem);
+            const todoItem = await response.json();
 
-            todoList.append(todoItem.item);
+            const todoItemElement = createTodoItemElement(todoItem, handlers);
+
+            todoList.append(todoItemElement.item);
 
             todoItemForm.input.value = '';
             todoItemForm.button.setAttribute('disabled', 'true');
-
-            setLocalStorage();
         });
 
         if (array.done) {
-            let todoItemStart = createTodoItem(array.name);
-
+            let todoItemStart = createTodoItemElement(array);
             addItemButtonsActivities(todoItemStart);
-
             todoList.append(todoItemStart.item);
-
-            // setLocalStorage();
         }
-
-        
-
-        // LocalStorage
-        // localStorage.clear()
-
-        function setLocalStorage() {
-            let pageContent = JSON.stringify(todoList.innerHTML);
-            localStorage.setItem(namePage, pageContent)
-        }
-
-        todoList.innerHTML = JSON.parse(localStorage.getItem(namePage));
-
-        let successButtons = document.querySelectorAll('.btn-success'),
-            dangerButtons = document.querySelectorAll('.btn-danger'),
-            listItems = document.querySelectorAll('.list-group-item');
-
-        successButtons.forEach(function(elem, index) {
-            elem.addEventListener('click', function() {
-                listItems[index].classList.toggle('list-group-item-success');
-                setLocalStorage();
-            });
-        });
-        
-        dangerButtons.forEach(function(elem, index) {
-            elem.addEventListener('click', function() {
-                if (confirm('Вы уверены ?')) {
-                    listItems[index].remove();
-                    setLocalStorage();
-                }
-            })
-        })
     }
 
 
