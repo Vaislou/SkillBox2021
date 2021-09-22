@@ -1,0 +1,8 @@
+.title {
+    text-align: center;
+}
+
+.list__link {
+    text-decoration: none;
+    color: inherit;
+}
